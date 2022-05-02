@@ -87,6 +87,7 @@ To Do List
 #include "../include/detectnet.h"
 
 using namespace std;
+using namespace cv;
 
 #define DEBUG (1)
 #define NODE_NAME "person_3d_locator"
@@ -240,13 +241,7 @@ private:
     cv::Mat currentBgrImg_;
 
 
-    //yakir
-    string bgr_encoding_;
-    std_msgs::Header bgrheader_;
-    int bgrHeight_;
-    int bgrWidth_;
-    int bgrStep_;
-        
+   
 
     
     
@@ -384,7 +379,7 @@ public:
     }
 
 
-    float yakirGetDistance(int x, int y){
+    float yakirGetDistance(int x, int y, const Mat& depthImg){
 
         if( cameraInfoInited_){
             
@@ -396,7 +391,7 @@ public:
 
             cv::Point2d centerObject( x, y );
 
-            float d = curretDepthImg_.at<float>(centerObject.y, centerObject.x) / 1000; /// IN METERS
+            float d = depthImg.at<float>(centerObject.y, centerObject.x) / 1000; /// IN METERS
             
 
             return d;
@@ -426,17 +421,7 @@ public:
 
         if( !bgrInited_ ){
             
-            bgrInited_ = true;
-
-            bgr_encoding_ = msg->encoding;
-            bgrheader_ = msg->header ;
-            bgrHeight_ = msg->height;
-            bgrWidth_ = msg->width;
-            bgrStep_  = msg->step;
-
-            
-
-
+            bgrInited_ = true;          
            
         }
         try
@@ -456,4 +441,3 @@ public:
 };
 
 #endif
-

@@ -201,12 +201,14 @@ void Person3DLocator::Run()
         ros::spinOnce();
 
         //yakir
-        if( !cameraInfoInited_  || !bgrInited_){
+        if( !cameraInfoInited_  || !bgrInited_  ){
             continue;
         }
 
         iImageWidth = currentBgrImg_.cols;
         iImageHeight = currentBgrImg_.rows;
+
+
 
         // Reset target person IOU
         fTargetIOU = false;
@@ -223,22 +225,37 @@ void Person3DLocator::Run()
         
         //yakir
 
-        if( !currentBgrImg_.data){
+        cerr<<"111111111111111111111111111111111111 "<<endl;
+        if( !currentBgrImg_.data || !curretDepthImg_.data){
             continue;
         }
-        sensor_msgs::ImagePtr image_msg_detect = cv_bridge::CvImage(std_msgs::Header(), "bgr8", currentBgrImg_).toImageMsg();
+
+        Mat bgrWorkImg = currentBgrImg_.clone();
+        Mat depthImg = curretDepthImg_.clone();
+
+
+        sensor_msgs::ImagePtr image_msg_detect = cv_bridge::CvImage(std_msgs::Header(), "bgr8", bgrWorkImg).toImageMsg();
         detectnetWrapper.Detect(image_msg_detect);
+        cerr<<"22222222222222222222222222222222222222222222 "<<endl;
 
         // Publish Detections
         detectnetWrapper.PublishDetections();
 
+        cerr<<"33333333333333333333333333333 "<<endl;
+
+
         // Disable the person 3d locator, if disable is set
         if (nodeHandlerPrivate->hasParam(PERSON_3D_LOCATE_DISABLE_PARAM))
-        {
+        {   
+            cerr<<"qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq "<<endl;
             nodeHandlerPrivate->getParam(PERSON_3D_LOCATE_DISABLE_PARAM, bPerson3dLocateDisable);
 
+            cerr<<"wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww "<<endl;
+
             if (bPerson3dLocateDisable)
-            {
+            {   
+                cerr<<"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee "<<endl;
+
                 bIsTargetLocked = false;
 
                 nodeHandler.setParam(PERSON_FOLLOWER_STATUS_PARAM, PERSON_FOLLOWER_STOPPED);
@@ -247,6 +264,8 @@ void Person3DLocator::Run()
                 {
                     qRotationGoalQueue.pop();
                 }
+
+                cerr<<"rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr "<<endl;
 
                 ROS_WARN("Person 3D Locator is Disabled. Set person_3d_locate_disable parameter to false to enable it.");
                 continue;
@@ -258,7 +277,8 @@ void Person3DLocator::Run()
 
         // When target is locked
         if (bIsTargetLocked)
-        {
+        {   
+            cerr<<" 44444444444444444444444444444444444 "<<endl;
             ROS_INFO("updating position of tracker");
 
 #if TIME_MEASURE
@@ -269,8 +289,8 @@ void Person3DLocator::Run()
             // bIsTargetFound = tracker->update(realsense_camera.rgbImage, rBoundingBox);
             
             //yakir
-            bIsTargetFound = tracker->update(currentBgrImg_, rBoundingBox);
-
+            bIsTargetFound = tracker->update(bgrWorkImg, rBoundingBox);
+            cerr<<" 5555555555555555555555555555555 "<<endl;
 
 #if TIME_MEASURE
             recoveryElaspedTimeEnd = ros::Time::now();
@@ -299,6 +319,8 @@ void Person3DLocator::Run()
                 }
             }
 
+            cerr<<" 666666666666666666666666666666666 "<<endl;
+
             ROS_DEBUG("Tracker has IOU of %f", fTargetIOU);
 
             // Tracker lost the target
@@ -309,10 +331,14 @@ void Person3DLocator::Run()
 
             // Tracker located the target with some offset, re-initialize the tracker with detection that has maximum IOU
             else if ((fTargetIOU > fCriticalIOUThreshold) && (fTargetIOU < fWarningIOUThreshold))
-            {
+            {   
+                cerr<<" 777777777777777777777777 "<<endl;
                 tracker.release();
                 // tracker = cv::TrackerCSRT::create();
                 tracker = cv::TrackerGOTURN::create();
+
+                cerr<<" 8888888888888888888888 "<<endl;
+
 
                 // if (tracker->init(realsense_camera.rgbImage, rDetectionTargetBBox))
                 // {
@@ -325,15 +351,17 @@ void Person3DLocator::Run()
                 // }
 
                 //yakir
-                if (tracker->init(currentBgrImg_, rDetectionTargetBBox))
-                {
+                if (tracker->init(bgrWorkImg, rDetectionTargetBBox))
+                {   
                     ROS_DEBUG("Tracker Re-initialised!");
-                    tracker->update(currentBgrImg_, rBoundingBox);
+                    tracker->update(bgrWorkImg, rBoundingBox);
                 }
                 else
                 {
                     ROS_DEBUG("Tracker failed to  reinitialise!");
                 }
+
+                cerr<<" 9999999999999999999999999 "<<endl;
 
             }
 
@@ -342,13 +370,13 @@ void Person3DLocator::Run()
             // cv::rectangle(realsense_camera.rgbImage, rDetectionTargetBBox, cv::Scalar(0, 255, 0), 2, 1);
 
             //yakir
-            cv::rectangle(currentBgrImg_, rBoundingBox, cv::Scalar(255, 0, 0), 2, 1);
-            cv::rectangle(currentBgrImg_, rDetectionTargetBBox, cv::Scalar(0, 255, 0), 2, 1);
+            cv::rectangle(bgrWorkImg, rBoundingBox, cv::Scalar(255, 0, 0), 2, 1);
+            cv::rectangle(bgrWorkImg, rDetectionTargetBBox, cv::Scalar(0, 255, 0), 2, 1);
 
             // trackingImageMessage = cv_bridge::CvImage(std_msgs::Header(), PUBLISH_IMAGE_ENCODING, realsense_camera.rgbImage).toImageMsg();
             //yakir
             trackingImageMessage = cv_bridge::CvImage(std_msgs::Header(),
-                 PUBLISH_IMAGE_ENCODING, currentBgrImg_).toImageMsg();
+                 PUBLISH_IMAGE_ENCODING, bgrWorkImg).toImageMsg();
 
             trackingImageMessage->header.frame_id = TRACKING_IMAGE_FRAME_ID;
             trackingImagePublisher.publish(trackingImageMessage);
@@ -381,7 +409,7 @@ void Person3DLocator::Run()
                 // targetedPerson.first = realsense_camera.GetDistance(targetedPerson.second.bbox.center.x, targetedPerson.second.bbox.center.y);
 
                 //yakir
-                targetedPerson.first = yakirGetDistance(targetedPerson.second.bbox.center.x, targetedPerson.second.bbox.center.y);
+                targetedPerson.first = yakirGetDistance(targetedPerson.second.bbox.center.x, targetedPerson.second.bbox.center.y, depthImg);
 
             } // if (bIsTargetFound)
 
@@ -441,33 +469,40 @@ void Person3DLocator::Run()
             nearestPerson.first = NEAREST_PERSON_DEFAULT;
             detectedPersons.clear();
 
+            int count = 0;
+            cerr<<" num of detection "<<detectnetWrapper.detection2DArray.detections.size()<<endl;
             for (auto detection : detectnetWrapper.detection2DArray.detections)
             {
-
+                count++;
                 if ((detection.results[FALSE].id == PERSON_CLASS_ID) && (detection.results[FALSE].score >= PERSON_THRESHOLD))
                 {
                     //fDepth = realsense_camera.GetDistance(detection.bbox.center.x, detection.bbox.center.y);      
 
                     //yakir 
-                    fDepth = yakirGetDistance(detection.bbox.center.x, detection.bbox.center.y);      
-
+                    fDepth = yakirGetDistance(detection.bbox.center.x, detection.bbox.center.y, depthImg);      
+                    cerr<<" fDepth "<<fDepth<<" index "<<count<<endl;
                     if (fDepth <= FALSE)
                     {
                         ROS_INFO("Unable to get depth of person or the person is too far");
                         continue;
                     }
-
+                    cerr<<"yakir1"<<endl;
                     detectedPersons.push_back(std::make_pair(fDepth, detection));
 
                     if (fDepth < nearestPerson.first)
                     {
                         nearestPerson = std::make_pair(fDepth, detection);
                     }
+                    cerr<<"yakir2"<<endl;
+
                 }
 
             } // for (auto detection : detectnetWrapper.detection2DArray.detections)
+            
+            cerr<<"yakir3 "<<NEAREST_PERSON_DEFAULT<<endl;
+
             if (nearestPerson.first != NEAREST_PERSON_DEFAULT)
-            {
+            {   
                 targetedPerson = nearestPerson;
 
                 if (CheckTargetRegion(targetedPerson.first) == FOLLOW)
@@ -477,6 +512,8 @@ void Person3DLocator::Run()
                                               static_cast<int>(targetedPerson.second.bbox.size_x),
                                               static_cast<int>(targetedPerson.second.bbox.size_y));
 
+
+                    cerr<<" yakir 4 "<<rBoundingBox<<endl; 
                     tracker.release();
                     // tracker = cv::TrackerCSRT::create();
                     tracker = cv::TrackerGOTURN::create();
@@ -486,11 +523,14 @@ void Person3DLocator::Run()
                     //     ROS_DEBUG("Tracker Initialised!");
                     // }
 
+                    cerr<<" yakir 5 "<<endl;
                     //yakir
-                    if (tracker->init(currentBgrImg_, rBoundingBox))
-                    {
-                        ROS_DEBUG("Tracker Initialised!");
-                    }
+                    // if (tracker->init(bgrWorkImg, rBoundingBox))
+                    // {
+                    //     ROS_DEBUG("Tracker Initialised!");
+                    // }
+
+                    cerr<<" yakir 6 "<<endl;
 
                     bIsTargetLocked = true;
                 }
@@ -860,4 +900,3 @@ Person3DLocator::~Person3DLocator()
 {
     nodeHandler.setParam(PERSON_FOLLOWER_STATUS_PARAM, PERSON_FOLLOWER_STOPPED);
 }
-
