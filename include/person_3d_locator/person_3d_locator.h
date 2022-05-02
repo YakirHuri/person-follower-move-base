@@ -34,7 +34,6 @@ To Do List
 #define PERSON_3D_LOCATOR_H
 
 #include <ros/ros.h>
-#include "../include/realsense_camera.h"
 #include <opencv2/core/utility.hpp>
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
@@ -63,13 +62,31 @@ To Do List
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 
+#include <string>
+
+#include <ros/ros.h>
+#include <librealsense2/rs.hpp>
+#include <librealsense2/rsutil.h>
+#include <opencv2/opencv.hpp>
+#include "../opencv/cv-helpers.hpp"
+#include <opencv2/highgui/highgui.hpp>
+#include <cv_bridge/cv_bridge.h>
+#include <image_transport/image_transport.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <geometry_msgs/TransformStamped.h>
+
+#define PUBLISH_IMAGE_ENCODING      "bgr8"
+#define CENTER_OFFSET_DEPTH          (2)  // Number of pixels
+#define CENTER_FAR_OFFSET_DEPTH      (5)  // Number of pixels
+
+#define CLIPPING_DISTANCE            (5)
+#define CAMERA_FRAME_ID              ("camera_link")
+#define COLOR_IMAGE_FRAME_ID         ("color_image")
 
 
-#define USE_DETECT_NET 0
-
-#ifndef USE_DETECT_NET
 #include "../include/detectnet.h"
-#endif
+
+using namespace std;
 
 #define DEBUG (1)
 #define NODE_NAME "person_3d_locator"
@@ -156,7 +173,7 @@ private:
     cv::Ptr<cv::Tracker> tracker;
 
     // Flag to disable person 3d locator
-    bool bPerson3dLocateDisable;
+    bool bPerson3dLocateDisable = false;
     // Flag to indicate the target locked status
     bool bIsTargetLocked;
 
@@ -221,6 +238,16 @@ private:
     bool bgrInited_ = false;
     cv::Mat curretDepthImg_;
     cv::Mat currentBgrImg_;
+
+
+    //yakir
+    string bgr_encoding_;
+    std_msgs::Header bgrheader_;
+    int bgrHeight_;
+    int bgrWidth_;
+    int bgrStep_;
+        
+
     
     
     /*============================================================================
@@ -284,14 +311,14 @@ public:
 
     Person3DLocator(ros::NodeHandle &nodeHandler) : nodeHandler(nodeHandler){
 
-        //yakir
-        image_sub.subscribe(nodeHandler, "/camera/depth/image_rect", 1);
+         //yakir
+        image_sub.subscribe(nodeHandler, "/camera/depth/image_rect_raw", 1);
         image_sub.registerCallback(&Person3DLocator::depthCallback, this);
 
-        info_sub.subscribe(nodeHandler, "/camera/depth/image_rect/camera_info", 1);
+        info_sub.subscribe(nodeHandler, "/camera/depth/camera_info", 1);
         info_sub.registerCallback(&Person3DLocator::cameraInfoCallback, this); 
 
-        imgBgrSubscriber_ = nodeHandler.subscribe("/color_image_raw/camera/color/image_raw", 1,
+        imgBgrSubscriber_ = nodeHandler.subscribe("/camera/color/image_raw", 1,
                         &Person3DLocator::imageCallback, this);     
 
 
@@ -395,11 +422,27 @@ public:
     }
 
     void imageCallback(const sensor_msgs::ImageConstPtr &msg)
-    {
+    {   
+
+        if( !bgrInited_ ){
+            
+            bgrInited_ = true;
+
+            bgr_encoding_ = msg->encoding;
+            bgrheader_ = msg->header ;
+            bgrHeight_ = msg->height;
+            bgrWidth_ = msg->width;
+            bgrStep_  = msg->step;
+
+            
+
+
+           
+        }
         try
         {
-           currentBgrImg_ = cv_bridge::toCvShare(msg, "bgr8")->image;
-           bgrInited_ = true;
+           currentBgrImg_ = cv_bridge::toCvShare(msg, "bgr8")->image;           
+          
         }
         catch (cv_bridge::Exception &e)
         {
@@ -413,3 +456,4 @@ public:
 };
 
 #endif
+

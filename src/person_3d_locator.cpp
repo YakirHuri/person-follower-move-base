@@ -80,10 +80,8 @@ void Person3DLocator::Init()
         ROS_DEBUG("Failed to create tracker");
     }
 
-#ifndef USE_DETECT_NET
     // Load detection model
     detectnetWrapper.LoadModel();
-#endif
 
     // Initalize (or) reset detected pesons
     detectedPersons.clear();
@@ -220,16 +218,19 @@ void Person3DLocator::Run()
         // realsense_camera.PublishImage();
         // ROS_DEBUG("Frame Captured (%d, %d)", realsense_camera.rgbImage.cols, realsense_camera.rgbImage.rows);
 
-#ifndef USE_DETECT_NET
         // Run Detections on captured frame
-        // detectnetWrapper.Detect(realsense_camera.imageMessage);
+        //detectnetWrapper.Detect(realsense_camera.imageMessage);
         
         //yakir
-        detectnetWrapper.Detect(currentBgrImg_);
+
+        if( !currentBgrImg_.data){
+            continue;
+        }
+        sensor_msgs::ImagePtr image_msg_detect = cv_bridge::CvImage(std_msgs::Header(), "bgr8", currentBgrImg_).toImageMsg();
+        detectnetWrapper.Detect(image_msg_detect);
 
         // Publish Detections
         detectnetWrapper.PublishDetections();
-#endif
 
         // Disable the person 3d locator, if disable is set
         if (nodeHandlerPrivate->hasParam(PERSON_3D_LOCATE_DISABLE_PARAM))
@@ -277,7 +278,6 @@ void Person3DLocator::Run()
             ROS_DEBUG("Tracker update took : %d seconds", recoveryElaspedTime.toSec());
 #endif
 
-#ifndef USE_DETECT_NET
             // Calculate IOU for tracked person with the detected persons
             for (auto detection : detectnetWrapper.detection2DArray.detections)
             {
@@ -298,7 +298,6 @@ void Person3DLocator::Run()
                     }
                 }
             }
-#endif
 
             ROS_DEBUG("Tracker has IOU of %f", fTargetIOU);
 
@@ -441,7 +440,6 @@ void Person3DLocator::Run()
         {
             nearestPerson.first = NEAREST_PERSON_DEFAULT;
             detectedPersons.clear();
-#ifndef USE_DETECT_NET
 
             for (auto detection : detectnetWrapper.detection2DArray.detections)
             {
@@ -468,7 +466,6 @@ void Person3DLocator::Run()
                 }
 
             } // for (auto detection : detectnetWrapper.detection2DArray.detections)
-#endif
             if (nearestPerson.first != NEAREST_PERSON_DEFAULT)
             {
                 targetedPerson = nearestPerson;
@@ -863,3 +860,4 @@ Person3DLocator::~Person3DLocator()
 {
     nodeHandler.setParam(PERSON_FOLLOWER_STATUS_PARAM, PERSON_FOLLOWER_STOPPED);
 }
+

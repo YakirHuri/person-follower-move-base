@@ -1,7 +1,7 @@
 <launch>
 
     <arg name="image" default="/camera/color/image_raw"/>
-    <arg name="person_3d_locate_disable" default="true"/>
+    <arg name="person_3d_locate_disable" default="false"/>
 
     <!-- DETECTNET -->
 	<arg name="model_name" default="ssd-mobilenet-v2"/>
@@ -32,3 +32,4 @@
     </node>
     <!-- remap from="/person_3d_locator/nearest_person" to="/move_base_simple/goal"/-->
 </launch>
+
