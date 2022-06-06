@@ -61,6 +61,10 @@ To Do List
 #include <image_geometry/stereo_camera_model.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
+#include <tf/tf.h>
+#include <tf/transform_listener.h>
+#include <visualization_msgs/MarkerArray.h>
+
 
 #include <string>
 
@@ -127,6 +131,15 @@ Name    :   Person3DLocator
 Purpose :   Class to implement the person 3d locator
 ============================================================================*/
 
+
+struct YakirPerson {
+
+    vision_msgs::Detection2D box_;
+
+    float distnace_;
+
+    geometry_msgs::PointStamped location_;
+};
 class Person3DLocator
 {
 
@@ -135,13 +148,22 @@ private:
     ros::NodeHandle *nodeHandlerPrivate;
 
     // To store the detections and the centeral depth of bounding box
-    std::vector<std::pair<float, vision_msgs::Detection2D>> detectedPersons;
+    // std::vector<std::pair<float, vision_msgs::Detection2D>> detectedPersons;
+
+    // // Nearest person bounding box and depth
+    // std::pair<float, vision_msgs::Detection2D> nearestPerson;
+
+    // // Target person bounding box and depth
+    // std::pair<float, vision_msgs::Detection2D> targetedPerson;
+
+
+    std::vector<YakirPerson> detectedPersonsYakir_;
 
     // Nearest person bounding box and depth
-    std::pair<float, vision_msgs::Detection2D> nearestPerson;
+    YakirPerson nearestPersonYakir_;
 
     // Target person bounding box and depth
-    std::pair<float, vision_msgs::Detection2D> targetedPerson;
+    YakirPerson targetedPersonYakir_;
 
     // Frame in which the goal has to be sent
     std::string sGoalFrameName;
@@ -230,7 +252,7 @@ private:
 
     geometry_msgs::PoseStamped recoveryStartPoseMsg;
 
-    //yakir
+    //yakir params
     message_filters::Subscriber<sensor_msgs::Image> image_sub;
     message_filters::Subscriber<sensor_msgs::CameraInfo> info_sub;
     image_geometry::PinholeCameraModel pinholeCameraModel_;
@@ -239,6 +261,17 @@ private:
     bool bgrInited_ = false;
     cv::Mat curretDepthImg_;
     cv::Mat currentBgrImg_;
+    tf::TransformListener yakir_tfListener_;
+    tf::StampedTransform transform_;
+
+    bool initTransform_ = false;
+    float cx_ ;
+    float cy_ ;
+    float fx_ ;
+    float fy_;
+
+    ros::Publisher targets_marker_pub_;
+
 
 
    
@@ -316,6 +349,8 @@ public:
         imgBgrSubscriber_ = nodeHandler.subscribe("/camera/color/image_raw", 1,
                         &Person3DLocator::imageCallback, this);     
 
+        targets_marker_pub_ = nodeHandler.advertise<visualization_msgs::MarkerArray>("/persons_markers", 10);
+
 
     };
 
@@ -383,11 +418,11 @@ public:
 
         if( cameraInfoInited_){
             
-            float cx = pinholeCameraModel_.cx();
-            float cy = pinholeCameraModel_.cy();
+            cx_ = pinholeCameraModel_.cx();
+            cy_ = pinholeCameraModel_.cy();
 
-            float fx = pinholeCameraModel_.fx();
-            float fy = pinholeCameraModel_.fy(); 
+            fx_ = pinholeCameraModel_.fx();
+            fy_ = pinholeCameraModel_.fy(); 
 
             cv::Point2d centerObject( x, y );
 
@@ -435,9 +470,96 @@ public:
         }
     }
 
+    bool extractDepthFromBboxObject( cv::Point2d pix, float d,
+           geometry_msgs::PointStamped& pose , string targetFrame);
+
+      geometry_msgs::PointStamped transformToByFrames(
+        Point3d objectPoint3d, string base_Frame, string child_Frame)  {
 
 
+        geometry_msgs::PointStamped pointStampedIn;
+        geometry_msgs::PointStamped pointStampedOut;
 
+        pointStampedIn.header.frame_id = child_Frame;
+        pointStampedIn.header.stamp = ros::Time(0);
+        pointStampedIn.point.x = objectPoint3d.x;
+        pointStampedIn.point.y = objectPoint3d.y;
+        pointStampedIn.point.z = objectPoint3d.z;
+
+        if( !initTransform_){
+
+            try{
+                
+
+                if  (yakir_tfListener_.waitForTransform(base_Frame, child_Frame, 
+                    ros::Time(0), ros::Duration(0.005))){
+                        
+                    initTransform_ = true;
+
+                    yakir_tfListener_.lookupTransform(base_Frame, child_Frame,  
+                                        ros::Time(0), transform_);
+
+                    yakir_tfListener_.transformPoint(base_Frame, pointStampedIn, pointStampedOut);
+
+                    return pointStampedOut;
+                    
+                }else {
+
+                   //cerr<<"Failed to find transform between "<<base_Frame<<" and "<<child_Frame<<endl;
+                   return pointStampedOut;
+                }
+
+            }   
+                catch (tf::TransformException ex){
+                ROS_ERROR("%s",ex.what());
+            }
+        }
+        else {
+
+
+            yakir_tfListener_.transformPoint(base_Frame, pointStampedIn, pointStampedOut);
+
+
+            return pointStampedOut;
+        }  
+
+      
+    }
+
+    void publishTargetsMarkers(){
+
+        visualization_msgs::MarkerArray Markerarr;
+        Markerarr.markers.resize(detectedPersonsYakir_.size());
+
+
+        for(int i = 0; i < detectedPersonsYakir_.size(); i++){
+
+            Markerarr.markers[i].header.frame_id = detectedPersonsYakir_[i].location_.header.frame_id;
+            Markerarr.markers[i].header.stamp = ros::Time::now();
+            Markerarr.markers[i].ns = "points_and_lines";
+            Markerarr.markers[i].id = i+1;
+            Markerarr.markers[i].action = visualization_msgs::Marker::ADD;
+            Markerarr.markers[i].type = visualization_msgs::Marker::SPHERE;
+            Markerarr.markers[i].pose.position.x = detectedPersonsYakir_[i].location_.point.x;
+            Markerarr.markers[i].pose.position.y =  detectedPersonsYakir_[i].location_.point.y;
+            Markerarr.markers[i].pose.position.z =  detectedPersonsYakir_[i].location_.point.z;
+            Markerarr.markers[i].pose.orientation.x = 0.0;
+            Markerarr.markers[i].pose.orientation.y = 0.0;
+            Markerarr.markers[i].pose.orientation.z = 0.0;
+            Markerarr.markers[i].pose.orientation.w = 1.0;
+            Markerarr.markers[i].scale.x = 0.3;
+            Markerarr.markers[i].scale.y = 0.3;
+            Markerarr.markers[i].scale.z = 0.3;
+            Markerarr.markers[i].color.a = 1.0;
+            Markerarr.markers[i].color.r = 0.0;
+            Markerarr.markers[i].color.g = 0.1;
+            Markerarr.markers[i].color.b = 0.0;
+
+
+        }
+
+        targets_marker_pub_.publish(Markerarr);
+    }
 };
 
 #endif

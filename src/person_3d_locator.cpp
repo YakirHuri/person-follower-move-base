@@ -84,7 +84,7 @@ void Person3DLocator::Init()
     detectnetWrapper.LoadModel();
 
     // Initalize (or) reset detected pesons
-    detectedPersons.clear();
+    detectedPersonsYakir_.clear();
 
     // Initial goal is relative to color camera frame
     poseMsg.header.frame_id = CAMERA_FRAME_ID;
@@ -225,7 +225,6 @@ void Person3DLocator::Run()
         
         //yakir
 
-        cerr<<"111111111111111111111111111111111111 "<<endl;
         if( !currentBgrImg_.data || !curretDepthImg_.data){
             continue;
         }
@@ -236,12 +235,10 @@ void Person3DLocator::Run()
 
         sensor_msgs::ImagePtr image_msg_detect = cv_bridge::CvImage(std_msgs::Header(), "bgr8", bgrWorkImg).toImageMsg();
         detectnetWrapper.Detect(image_msg_detect);
-        cerr<<"22222222222222222222222222222222222222222222 "<<endl;
 
         // Publish Detections
         detectnetWrapper.PublishDetections();
 
-        cerr<<"33333333333333333333333333333 "<<endl;
 
 
         // Disable the person 3d locator, if disable is set
@@ -402,14 +399,13 @@ void Person3DLocator::Run()
                 bIsRotationInitiated = false;
 
                 // Update the target person location
-                targetedPerson.second.bbox.center.x = rBoundingBox.x + (rBoundingBox.width / 2);
-                targetedPerson.second.bbox.center.y = rBoundingBox.y + (rBoundingBox.height / 2);
-                targetedPerson.second.bbox.size_x = rBoundingBox.width;
-                targetedPerson.second.bbox.size_y = rBoundingBox.height;
+                targetedPersonYakir_.box_.bbox.center.x = rBoundingBox.x + (rBoundingBox.width / 2);
+                targetedPersonYakir_.box_.bbox.center.y = rBoundingBox.y + (rBoundingBox.height / 2);
+                targetedPersonYakir_.box_.bbox.size_x = rBoundingBox.width;
+                targetedPersonYakir_.box_.bbox.size_y = rBoundingBox.height;
                 // targetedPerson.first = realsense_camera.GetDistance(targetedPerson.second.bbox.center.x, targetedPerson.second.bbox.center.y);
-
                 //yakir
-                targetedPerson.first = yakirGetDistance(targetedPerson.second.bbox.center.x, targetedPerson.second.bbox.center.y, depthImg);
+                targetedPersonYakir_.distnace_ = yakirGetDistance(targetedPersonYakir_.box_.bbox.center.x, targetedPersonYakir_.box_.bbox.center.y, depthImg);
 
             } // if (bIsTargetFound)
 
@@ -466,8 +462,10 @@ void Person3DLocator::Run()
 
         else
         {
-            nearestPerson.first = NEAREST_PERSON_DEFAULT;
-            detectedPersons.clear();
+            nearestPersonYakir_.distnace_ = NEAREST_PERSON_DEFAULT;
+            detectedPersonsYakir_.clear();
+
+
 
             int count = 0;
             cerr<<" num of detection "<<detectnetWrapper.detection2DArray.detections.size()<<endl;
@@ -487,30 +485,43 @@ void Person3DLocator::Run()
                         continue;
                     }
                     cerr<<"yakir1"<<endl;
-                    detectedPersons.push_back(std::make_pair(fDepth, detection));
+                    YakirPerson person;
+                    person.box_ = detection;
+                    person.distnace_ = fDepth;
+                    extractDepthFromBboxObject( cv::Point2d(detection.bbox.center.x, detection.bbox.center.y), 
+                        fDepth, person.location_, "odom");
 
-                    if (fDepth < nearestPerson.first)
+                    detectedPersonsYakir_.push_back(person);
+
+                    if (person.distnace_ < nearestPersonYakir_.distnace_)
                     {
-                        nearestPerson = std::make_pair(fDepth, detection);
+                        nearestPersonYakir_.distnace_ = fDepth;
+                        nearestPersonYakir_.box_ = detection;
+                        nearestPersonYakir_.location_ = person.location_;
                     }
                     cerr<<"yakir2"<<endl;
 
                 }
 
-            } // for (auto detection : detectnetWrapper.detection2DArray.detections)
+            }
+
+            if( true){
+
+                publishTargetsMarkers();
+            }
             
             cerr<<"yakir3 "<<NEAREST_PERSON_DEFAULT<<endl;
 
-            if (nearestPerson.first != NEAREST_PERSON_DEFAULT)
+            if (nearestPersonYakir_.distnace_ != NEAREST_PERSON_DEFAULT)
             {   
-                targetedPerson = nearestPerson;
+                targetedPersonYakir_ = nearestPersonYakir_;
 
-                if (CheckTargetRegion(targetedPerson.first) == FOLLOW)
+                if (CheckTargetRegion(targetedPersonYakir_.distnace_) == FOLLOW)
                 {
-                    rBoundingBox = cv::Rect2d(static_cast<int>(targetedPerson.second.bbox.center.x - (targetedPerson.second.bbox.size_x / 2)),
-                                              static_cast<int>(targetedPerson.second.bbox.center.y - (targetedPerson.second.bbox.size_y / 2)),
-                                              static_cast<int>(targetedPerson.second.bbox.size_x),
-                                              static_cast<int>(targetedPerson.second.bbox.size_y));
+                    rBoundingBox = cv::Rect2d(static_cast<int>(targetedPersonYakir_.box_.bbox.center.x - (targetedPersonYakir_.box_.bbox.size_x / 2)),
+                                              static_cast<int>(targetedPersonYakir_.box_.bbox.center.y - (targetedPersonYakir_.box_.bbox.size_y / 2)),
+                                              static_cast<int>(targetedPersonYakir_.box_.bbox.size_x),
+                                              static_cast<int>(targetedPersonYakir_.box_.bbox.size_y));
 
 
                     cerr<<" yakir 4 "<<rBoundingBox<<endl; 
@@ -530,9 +541,9 @@ void Person3DLocator::Run()
                     //     ROS_DEBUG("Tracker Initialised!");
                     // }
 
-                    cerr<<" yakir 6 "<<endl;
+                    cerr<<" yakir 6 bIsTargetLocked"<<endl;
 
-                    bIsTargetLocked = true;
+                    //bIsTargetLocked = true;
                 }
             }
 
@@ -540,29 +551,38 @@ void Person3DLocator::Run()
 
         if (bIsTargetLocked)
         {
-            personCameraTarget.x = targetedPerson.second.bbox.center.x;
-            personCameraTarget.y = targetedPerson.second.bbox.center.y;
-            personCameraTarget.rawDepthRayDistance = targetedPerson.first;
+            // personCameraTarget.x = targetedPersonYakir_.box_.bbox.center.x;
+            // personCameraTarget.y = targetedPersonYakir_.box_.bbox.center.y;
+            // personCameraTarget.rawDepthRayDistance = targetedPersonYakir_.distnace_;
 
-            // tangentialDepth = targetDepth * cos(angle of bbox center from center of image)
-            // angle of bbox center from center of image =
-            ROS_DEBUG("Nearest person at %f, %f, %f", targetedPerson.second.bbox.center.x, targetedPerson.second.bbox.center.y, targetedPerson.first);
+            // // tangentialDepth = targetDepth * cos(angle of bbox center from center of image)
+            // // angle of bbox center from center of image =
+            // ROS_DEBUG("Nearest person at %f, %f, %f", targetedPerson.box_.bbox.center.x,
+            //      targetedPerson.box_.bbox.center.y, targetedPerson.distnace_);
 
             // Compute the 3D coordinate of target person
 
-            // Vertical View
-            dPixelDifference = abs(HALF_OF(iImageHeight) - targetedPerson.second.bbox.center.y);
-            dPixelAngleFromCenter = DEG_TO_RAD((dPixelDifference / HALF_OF(iImageHeight)) * (double)(HALF_OF(VERTICAL_FIELD_OF_VIEW)));
-            fVerticalViewYDepthToCenterYDepthProjection = cos(dPixelAngleFromCenter) * targetedPerson.first;
+            // // Vertical View
+            // dPixelDifference = abs(HALF_OF(iImageHeight) - targetedPerson.second.bbox.center.y);
+            // dPixelAngleFromCenter = DEG_TO_RAD((dPixelDifference / HALF_OF(iImageHeight)) * (double)(HALF_OF(VERTICAL_FIELD_OF_VIEW)));
+            // fVerticalViewYDepthToCenterYDepthProjection = cos(dPixelAngleFromCenter) * targetedPerson.first;
 
-            // Horizontal View
-            dPixelDifference = abs(HALF_OF(iImageWidth) - targetedPerson.second.bbox.center.x);
-            dPixelAngleFromCenter = DEG_TO_RAD((dPixelDifference / HALF_OF(iImageWidth)) * (double)(HALF_OF(HORIZONTAL_FIELD_OF_VIEW)));
+            // // Horizontal View
+            // dPixelDifference = abs(HALF_OF(iImageWidth) - targetedPerson.second.bbox.center.x);
+            // dPixelAngleFromCenter = DEG_TO_RAD((dPixelDifference / HALF_OF(iImageWidth)) * (double)(HALF_OF(HORIZONTAL_FIELD_OF_VIEW)));
 
-            personCameraTarget.depthRayDistance = fVerticalViewYDepthToCenterYDepthProjection;
-            personCameraTarget.angleX = dPixelAngleFromCenter;
+            // personCameraTarget.depthRayDistance = fVerticalViewYDepthToCenterYDepthProjection;
+            // personCameraTarget.angleX = dPixelAngleFromCenter;
 
-            PrepareTargetPoseFromDepthRay(targetFromCameraPoseMsg, personCameraTarget.depthRayDistance, personCameraTarget.angleX, personCameraTarget.x);
+            //PrepareTargetPoseFromDepthRay(targetFromCameraPoseMsg, personCameraTarget.depthRayDistance, personCameraTarget.angleX, personCameraTarget.x);
+            
+            //yakir
+            targetFromCameraPoseMsg.header.frame_id = "odom";
+            targetFromCameraPoseMsg.pose.position.x = targetedPersonYakir_.location_.point.x;
+            targetFromCameraPoseMsg.pose.position.y = targetedPersonYakir_.location_.point.y;
+            targetFromCameraPoseMsg.pose.position.z = targetedPersonYakir_.location_.point.z;
+
+
 
             // Check the target region
             eTargetRegion = CheckTargetRegion(fVerticalViewYDepthToCenterYDepthProjection);
@@ -573,7 +593,7 @@ void Person3DLocator::Run()
                 fVerticalViewYDepthToCenterYDepthProjection -= fMinFollowRegion;
             }
 
-            PrepareTargetPoseFromDepthRay(poseMsg, fVerticalViewYDepthToCenterYDepthProjection, personCameraTarget.angleX, personCameraTarget.x);
+            //PrepareTargetPoseFromDepthRay(poseMsg, fVerticalViewYDepthToCenterYDepthProjection, personCameraTarget.angleX, personCameraTarget.x);
 
             if (eTargetRegion != FOLLOW)
             {
@@ -597,6 +617,25 @@ Input   :   n/a
 Output  :   n/a
 Notes   :   Reference https://answers.ros.org/question/323075/transform-the-coordinate-frame-of-a-pose-from-one-fixed-frame-to-another/
 ============================================================================*/
+
+
+bool Person3DLocator::extractDepthFromBboxObject( cv::Point2d pix, float d,
+           geometry_msgs::PointStamped& pose, string targetFrame ) {
+               
+        string source_frame = "camera_depth_optical_frame";
+       
+        if( isinf(d) || d == 0){
+            return false;
+        }
+
+        float dM = d / 1000;
+        cv::Point3d p = cv::Point3d(((pix.x - cx_) * dM / fx_), ((pix.y - cy_) * dM / fy_), dM);
+
+        pose = transformToByFrames(p, targetFrame , source_frame );
+           
+
+        return true;
+    }
 
 
 
@@ -670,7 +709,7 @@ void Person3DLocator::PublishRotationGoal()
     for (iRotationSteps = static_cast<int>(true); iRotationSteps <= (FULL_ROTATION_DEGREE / ROTATION_STEP); iRotationSteps++)
     {
 
-        if (targetedPerson.second.bbox.center.x > (iImageWidth / 2))
+        if (targetedPersonYakir_.box_.bbox.center.x > (iImageWidth / 2))
         {
             ROS_INFO("Target is on right side");
             qQuaternionTargetFromCam.setRPY(FALSE, FALSE, -DEG_TO_RAD(ROTATION_STEP));
