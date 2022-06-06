@@ -201,7 +201,7 @@ void Person3DLocator::Run()
         ros::spinOnce();
 
         //yakir
-        if( !cameraInfoInited_  || !bgrInited_  ){
+        if( !cameraInfoInited_  || !bgrInited_ || !colorCameraInfoInited_ ){
             continue;
         }
 
@@ -394,9 +394,10 @@ void Person3DLocator::Run()
                 targetedPersonYakir_.box_.bbox.center.y = rBoundingBox.y + (rBoundingBox.height / 2);
                 targetedPersonYakir_.box_.bbox.size_x = rBoundingBox.width;
                 targetedPersonYakir_.box_.bbox.size_y = rBoundingBox.height;
-                // targetedPerson.first = realsense_camera.GetDistance(targetedPerson.second.bbox.center.x, targetedPerson.second.bbox.center.y);
+
                 //yakir
-                targetedPersonYakir_.distnace_ = yakirGetDistance(targetedPersonYakir_.box_.bbox.center.x, targetedPersonYakir_.box_.bbox.center.y, depthImg);
+                targetedPersonYakir_.distnace_ = yakirGetDistance(targetedPersonYakir_.box_.bbox.center.x,
+                     targetedPersonYakir_.box_.bbox.center.y, depthImg);
 
             } // if (bIsTargetFound)
 
@@ -457,6 +458,16 @@ void Person3DLocator::Run()
             detectedPersonsYakir_.clear();
 
 
+            Mat depthGrayscale;
+            double minVal;
+            double maxVal;
+            minMaxLoc(depthImg, &minVal, &maxVal);
+            depthImg.convertTo(depthGrayscale, CV_8UC1, (255 / (maxVal - minVal)));
+            cv::Mat distanceTransformImg;
+            distanceTransform(depthGrayscale, distanceTransformImg, DIST_L2, 3);
+            normalize(distanceTransformImg, distanceTransformImg, 0, 1.0, NORM_MINMAX);   
+
+            cvtColor(depthGrayscale, depthGrayscale, COLOR_GRAY2BGR);
 
             int count = 0;
             cerr<<" num of detection "<<detectnetWrapper.detection2DArray.detections.size()<<endl;
@@ -465,20 +476,38 @@ void Person3DLocator::Run()
                 count++;
                 if ((detection.results[FALSE].id == PERSON_CLASS_ID) && (detection.results[FALSE].score >= PERSON_THRESHOLD))
                 {
-                    //fDepth = realsense_camera.GetDistance(detection.bbox.center.x, detection.bbox.center.y);      
+                    cv::Rect depth_bounding_box;
+                    auto rBBoxTemp = cv::Rect2d(static_cast<int>(detection.bbox.center.x - (detection.bbox.size_x / 2)),
+                                           static_cast<int>(detection.bbox.center.y - (detection.bbox.size_y / 2)),
+                                           static_cast<int>(detection.bbox.size_x), static_cast<int>(detection.bbox.size_y));
+
+                    cerr<<" oleCameraModel_.cameraInfo().width "<<colorPinholeCameraModel_.cameraInfo().width<<" depthImg.cols "<<depthImg.cols<<endl;
+                    double scale_x = double((double)depthImg.cols / (double) (colorPinholeCameraModel_.cameraInfo().width));
+                    double scale_y = double((double)depthImg.rows / (double) (colorPinholeCameraModel_.cameraInfo().height));
+                    depth_bounding_box.width = rBBoxTemp.width * scale_x;
+                    depth_bounding_box.height = rBBoxTemp.height * scale_y;
+                    depth_bounding_box.x = rBBoxTemp.x * scale_x;
+                    depth_bounding_box.y = rBBoxTemp.y * scale_y; 
+
+                    auto centerDepth = cv::Point2d(depth_bounding_box.x + (depth_bounding_box.width /2),
+                        depth_bounding_box.y + (depth_bounding_box.height /2));
 
                     //yakir 
-                    fDepth = yakirGetDistance(detection.bbox.center.x, detection.bbox.center.y, depthImg);      
+                    fDepth = yakirGetDistance(centerDepth.x, centerDepth.y, depthImg);      
                     cerr<<" fDepth "<<fDepth<<" index "<<count<<endl;
                     if (fDepth  < 0)
                     {
                         ROS_INFO("Unable to get depth of person or the person is too far");
                         continue;
-                    }
+                    }     
+
+                    cv::rectangle(depthGrayscale, depth_bounding_box, cv::Scalar(0,255,0), 2);
+                    cv::circle(depthGrayscale, centerDepth, 5 , cv::Scalar(0,255,0), -1);
+
                     YakirPerson person;
                     person.box_ = detection;
                     person.distnace_ = fDepth;
-                    extractDepthFromBboxObject( cv::Point2d(detection.bbox.center.x, detection.bbox.center.y), 
+                    extractDepthFromBboxObject(centerDepth, 
                         fDepth, person.location_, "odom");
 
                     detectedPersonsYakir_.push_back(person);
@@ -493,6 +522,9 @@ void Person3DLocator::Run()
                 }
 
             }
+
+            auto msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", depthGrayscale).toImageMsg();
+            debug_depth_pub_.publish(msg);
 
             if( true){
                 

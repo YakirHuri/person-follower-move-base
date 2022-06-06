@@ -255,9 +255,16 @@ private:
     //yakir params
     message_filters::Subscriber<sensor_msgs::Image> image_sub;
     message_filters::Subscriber<sensor_msgs::CameraInfo> info_sub;
+    message_filters::Subscriber<sensor_msgs::CameraInfo> color_info_sub;
+
+    image_transport::Publisher  debug_depth_pub_;
+
     image_geometry::PinholeCameraModel pinholeCameraModel_;
+    image_geometry::PinholeCameraModel colorPinholeCameraModel_;
+    
     ros::Subscriber imgBgrSubscriber_;
     bool cameraInfoInited_ = false;
+    bool colorCameraInfoInited_  = false;
     bool bgrInited_ = false;
     cv::Mat curretDepthImg_;
     cv::Mat currentBgrImg_;
@@ -349,7 +356,13 @@ public:
         imgBgrSubscriber_ = nodeHandler.subscribe("/camera/color/image_raw", 1,
                         &Person3DLocator::imageCallback, this);     
 
+        color_info_sub.subscribe(nodeHandler, "/camera/color/camera_info", 1);
+        color_info_sub.registerCallback(&Person3DLocator::colorCameraInfoCallback, this);
+
         targets_marker_pub_ = nodeHandler.advertise<visualization_msgs::MarkerArray>("/persons_markers", 10);
+
+        image_transport::ImageTransport it(nodeHandler);
+        debug_depth_pub_ = it.advertise("/debug_depth", 1);
 
 
     };
@@ -469,6 +482,15 @@ public:
             ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
         }
     }
+
+    void colorCameraInfoCallback(const sensor_msgs::CameraInfoConstPtr &cam_info) {
+
+        if ( colorPinholeCameraModel_.fromCameraInfo(*cam_info) )
+        {
+            colorCameraInfoInited_ = true;
+        }
+    }
+
 
     bool extractDepthFromBboxObject( cv::Point2d pix, float d,
            geometry_msgs::PointStamped& pose , string targetFrame);
