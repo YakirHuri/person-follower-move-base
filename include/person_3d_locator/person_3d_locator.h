@@ -531,7 +531,7 @@ public:
         visualization_msgs::MarkerArray Markerarr;
         Markerarr.markers.resize(detectedPersonsYakir_.size());
 
-
+        cerr<<" detectedPersonsYakir_.size() "<<detectedPersonsYakir_.size()<<endl;
         for(int i = 0; i < detectedPersonsYakir_.size(); i++){
 
             Markerarr.markers[i].header.frame_id = detectedPersonsYakir_[i].location_.header.frame_id;
@@ -542,7 +542,7 @@ public:
             Markerarr.markers[i].type = visualization_msgs::Marker::SPHERE;
             Markerarr.markers[i].pose.position.x = detectedPersonsYakir_[i].location_.point.x;
             Markerarr.markers[i].pose.position.y =  detectedPersonsYakir_[i].location_.point.y;
-            Markerarr.markers[i].pose.position.z =  detectedPersonsYakir_[i].location_.point.z;
+            Markerarr.markers[i].pose.position.z =  0;//detectedPersonsYakir_[i].location_.point.z;
             Markerarr.markers[i].pose.orientation.x = 0.0;
             Markerarr.markers[i].pose.orientation.y = 0.0;
             Markerarr.markers[i].pose.orientation.z = 0.0;
@@ -552,13 +552,16 @@ public:
             Markerarr.markers[i].scale.z = 0.3;
             Markerarr.markers[i].color.a = 1.0;
             Markerarr.markers[i].color.r = 0.0;
-            Markerarr.markers[i].color.g = 0.1;
+            Markerarr.markers[i].color.g = 1.0;
             Markerarr.markers[i].color.b = 0.0;
+
+            //Markerarr.markers[i].lifetime = ros::Duration(1.0);
 
 
         }
 
-        targets_marker_pub_.publish(Markerarr);
+        if( detectedPersonsYakir_.size() > 0)
+            targets_marker_pub_.publish(Markerarr);
     }
 };
 
