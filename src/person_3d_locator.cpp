@@ -554,7 +554,7 @@ void Person3DLocator::Run()
             }
 
             // Publish the goal pose of target
-            PublishGoal(poseMsg);
+            PublishGoal(targetFromCameraPoseMsg);
 
             iTrackerRetryAttempts = iZero;
         }
