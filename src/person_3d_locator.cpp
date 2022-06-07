@@ -526,13 +526,19 @@ void Person3DLocator::Run()
             
             //yakir
             targetFromCameraPoseMsg.header.frame_id = "odom";
+            targetFromCameraPoseMsg.pose.position.x = targetedPersonYakir_.location_.point.x;
+            targetFromCameraPoseMsg.pose.position.y = targetedPersonYakir_.location_.point.y;
+            targetFromCameraPoseMsg.pose.position.z = 0;
 
-            cv::Point2d newP;
-            updateGoalByShift(targetedPersonYakir_.location_.point.x,targetedPersonYakir_.location_.point.y,
-                0.2, newP );
-            targetFromCameraPoseMsg.pose.position.x = newP.x;
-            targetFromCameraPoseMsg.pose.position.y = newP.y;
-            targetFromCameraPoseMsg.pose.position.z = 0;          
+            cerr<<" the goal is :"<<targetFromCameraPoseMsg.pose.position.x<<", "<<targetFromCameraPoseMsg.pose.position.y<<endl;
+
+            // cv::Point2d newP;
+            // updateGoalByShift(targetFromCameraPoseMsg.pose.position.x,targetFromCameraPoseMsg.pose.position.y,
+            //     0.2, newP );
+
+            // targetFromCameraPoseMsg.pose.position.x = newP.x;
+            // targetFromCameraPoseMsg.pose.position.y = newP.y;
+            // targetFromCameraPoseMsg.pose.position.z = 0;          
 
 
             if (eTargetRegion != FOLLOW)
