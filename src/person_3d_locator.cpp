@@ -483,7 +483,7 @@ void Person3DLocator::Run()
             // auto msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", depthGrayscale).toImageMsg();
             // debug_depth_pub_.publish(msg);
 
-            if( false){
+            if( true){
                 
                 cerr<<" publishTargetsMarkers "<<detectedPersonsYakir_.size()<<endl;
                 publishTargetsMarkers();
@@ -529,6 +529,12 @@ void Person3DLocator::Run()
             targetFromCameraPoseMsg.pose.position.x = targetedPersonYakir_.location_.point.x;
             targetFromCameraPoseMsg.pose.position.y = targetedPersonYakir_.location_.point.y;
             targetFromCameraPoseMsg.pose.position.z = 0;
+            targetFromCameraPoseMsg.pose.orientation.x = 0;
+            targetFromCameraPoseMsg.pose.orientation.y = 0;
+            targetFromCameraPoseMsg.pose.orientation.z = 0;
+            targetFromCameraPoseMsg.pose.orientation.w = 1;
+
+
 
             cerr<<" the goal is :"<<targetFromCameraPoseMsg.pose.position.x<<", "<<targetFromCameraPoseMsg.pose.position.y<<endl;
 
