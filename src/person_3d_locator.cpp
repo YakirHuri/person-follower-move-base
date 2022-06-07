@@ -538,13 +538,13 @@ void Person3DLocator::Run()
 
             cerr<<" the goal is :"<<targetFromCameraPoseMsg.pose.position.x<<", "<<targetFromCameraPoseMsg.pose.position.y<<endl;
 
-            // cv::Point2d newP;
-            // updateGoalByShift(targetFromCameraPoseMsg.pose.position.x,targetFromCameraPoseMsg.pose.position.y,
-            //     0.2, newP );
+            cv::Point2d newP;
+            updateGoalByShift(targetFromCameraPoseMsg.pose.position.x,targetFromCameraPoseMsg.pose.position.y,
+                0.2, newP );
 
-            // targetFromCameraPoseMsg.pose.position.x = newP.x;
-            // targetFromCameraPoseMsg.pose.position.y = newP.y;
-            // targetFromCameraPoseMsg.pose.position.z = 0;          
+            targetFromCameraPoseMsg.pose.position.x = newP.x;
+            targetFromCameraPoseMsg.pose.position.y = newP.y;
+            targetFromCameraPoseMsg.pose.position.z = 0;          
 
 
             if (eTargetRegion != FOLLOW)
