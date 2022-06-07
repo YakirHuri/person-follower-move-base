@@ -110,13 +110,7 @@ void Person3DLocator::Init()
     static_transformStamped.transform.translation.z = BASE_LINK_CAMERA_TRANSFORM_Z;
     static_transformStamped.transform.rotation.w = true;
 
-    // Publish tranform between base_link of the robot to camera
-    // staticTranformBroadcaster.sendTransform(static_transformStamped);
-
-    // // Publish transforms of realsense camera
-    // realsense_camera.PublishTransforms(staticTranformBroadcaster);
-    //yakir ??
-
+   
 
     // Get frame id to tranform the goal from the camera frame
     if (nodeHandlerPrivate->hasParam(GOAL_FRAME_PARAM_NAME))
@@ -186,10 +180,7 @@ void Person3DLocator::Run()
     TargetRegion eTargetRegion;
     int iTrackerRetryAttempts = static_cast<int>(false);
 
-    // realsense_camera.CaptureFrames();
-    // iImageWidth = realsense_camera.rgbImage.cols;
-    // iImageHeight = realsense_camera.rgbImage.cols;
-
+    
   
 
     nodeHandler.setParam(PERSON_FOLLOWER_STATUS_PARAM, PERSON_FOLLOWER_RUNNING);
@@ -201,7 +192,7 @@ void Person3DLocator::Run()
         ros::spinOnce();
 
         //yakir
-        if( !cameraInfoInited_  || !bgrInited_ || !colorCameraInfoInited_ ){
+        if( !cameraInfoInited_  || !bgrInited_ ){
             continue;
         }
 
@@ -213,17 +204,7 @@ void Person3DLocator::Run()
         // Reset target person IOU
         fTargetIOU = false;
 
-        // Capture color and depth frame from camera
-        // realsense_camera.CaptureFrames();
-
-        // Publish captured frames
-        // realsense_camera.PublishImage();
-        // ROS_DEBUG("Frame Captured (%d, %d)", realsense_camera.rgbImage.cols, realsense_camera.rgbImage.rows);
-
-        // Run Detections on captured frame
-        //detectnetWrapper.Detect(realsense_camera.imageMessage);
-        
-        //yakir
+       
 
         if( !currentBgrImg_.data || !curretDepthImg_.data){
             cerr<<" bad imgs "<<endl;
@@ -279,7 +260,6 @@ void Person3DLocator::Run()
 #endif
 
             // Fetch the current location of tracked object in image
-            // bIsTargetFound = tracker->update(realsense_camera.rgbImage, rBoundingBox);
             
             //yakir
             bIsTargetFound = tracker->update(bgrWorkImg, rBoundingBox);
@@ -327,19 +307,6 @@ void Person3DLocator::Run()
                 // tracker = cv::TrackerCSRT::create();
                 tracker = cv::TrackerGOTURN::create();
 
-
-
-                // if (tracker->init(realsense_camera.rgbImage, rDetectionTargetBBox))
-                // {
-                //     ROS_DEBUG("Tracker Re-initialised!");
-                //     tracker->update(realsense_camera.rgbImage, rBoundingBox);
-                // }
-                // else
-                // {
-                //     ROS_DEBUG("Tracker failed to  reinitialise!");
-                // }
-
-                //yakir
                 if (tracker->init(bgrWorkImg, rDetectionTargetBBox))
                 {   
                     ROS_DEBUG("Tracker Re-initialised!");
@@ -357,12 +324,11 @@ void Person3DLocator::Run()
             // cv::rectangle(realsense_camera.rgbImage, rBoundingBox, cv::Scalar(255, 0, 0), 2, 1);
             // cv::rectangle(realsense_camera.rgbImage, rDetectionTargetBBox, cv::Scalar(0, 255, 0), 2, 1);
 
-            //yakir
+            
             cv::rectangle(bgrWorkImg, rBoundingBox, cv::Scalar(255, 0, 0), 2, 1);
             cv::rectangle(bgrWorkImg, rDetectionTargetBBox, cv::Scalar(0, 255, 0), 2, 1);
 
-            // trackingImageMessage = cv_bridge::CvImage(std_msgs::Header(), PUBLISH_IMAGE_ENCODING, realsense_camera.rgbImage).toImageMsg();
-            //yakir
+            
             trackingImageMessage = cv_bridge::CvImage(std_msgs::Header(),
                  PUBLISH_IMAGE_ENCODING, bgrWorkImg).toImageMsg();
 
@@ -458,16 +424,16 @@ void Person3DLocator::Run()
             detectedPersonsYakir_.clear();
 
 
-            Mat depthGrayscale;
-            double minVal;
-            double maxVal;
-            minMaxLoc(depthImg, &minVal, &maxVal);
-            depthImg.convertTo(depthGrayscale, CV_8UC1, (255 / (maxVal - minVal)));
-            cv::Mat distanceTransformImg;
-            distanceTransform(depthGrayscale, distanceTransformImg, DIST_L2, 3);
-            normalize(distanceTransformImg, distanceTransformImg, 0, 1.0, NORM_MINMAX);   
+            // Mat depthGrayscale;
+            // double minVal;
+            // double maxVal;
+            // minMaxLoc(depthImg, &minVal, &maxVal);
+            // depthImg.convertTo(depthGrayscale, CV_8UC1, (255 / (maxVal - minVal)));
+            // cv::Mat distanceTransformImg;
+            // distanceTransform(depthGrayscale, distanceTransformImg, DIST_L2, 3);
+            // normalize(distanceTransformImg, distanceTransformImg, 0, 1.0, NORM_MINMAX);   
 
-            cvtColor(depthGrayscale, depthGrayscale, COLOR_GRAY2BGR);
+            // cvtColor(depthGrayscale, depthGrayscale, COLOR_GRAY2BGR);
 
             int count = 0;
             cerr<<" num of detection "<<detectnetWrapper.detection2DArray.detections.size()<<endl;
@@ -476,18 +442,9 @@ void Person3DLocator::Run()
                 count++;
                 if ((detection.results[FALSE].id == PERSON_CLASS_ID) && (detection.results[FALSE].score >= PERSON_THRESHOLD))
                 {
-                    cv::Rect depth_bounding_box;
-                    auto rBBoxTemp = cv::Rect2d(static_cast<int>(detection.bbox.center.x - (detection.bbox.size_x / 2)),
+                    cv::Rect depth_bounding_box = cv::Rect2d(static_cast<int>(detection.bbox.center.x - (detection.bbox.size_x / 2)),
                                            static_cast<int>(detection.bbox.center.y - (detection.bbox.size_y / 2)),
-                                           static_cast<int>(detection.bbox.size_x), static_cast<int>(detection.bbox.size_y));
-
-                    cerr<<" oleCameraModel_.cameraInfo().width "<<colorPinholeCameraModel_.cameraInfo().width<<" depthImg.cols "<<depthImg.cols<<endl;
-                    double scale_x = double((double)depthImg.cols / (double) (colorPinholeCameraModel_.cameraInfo().width));
-                    double scale_y = double((double)depthImg.rows / (double) (colorPinholeCameraModel_.cameraInfo().height));
-                    depth_bounding_box.width = rBBoxTemp.width * scale_x;
-                    depth_bounding_box.height = rBBoxTemp.height * scale_y;
-                    depth_bounding_box.x = rBBoxTemp.x * scale_x;
-                    depth_bounding_box.y = rBBoxTemp.y * scale_y; 
+                                           static_cast<int>(detection.bbox.size_x), static_cast<int>(detection.bbox.size_y));                  
 
                     auto centerDepth = cv::Point2d(depth_bounding_box.x + (depth_bounding_box.width /2),
                         depth_bounding_box.y + (depth_bounding_box.height /2));
@@ -501,8 +458,8 @@ void Person3DLocator::Run()
                         continue;
                     }     
 
-                    cv::rectangle(depthGrayscale, depth_bounding_box, cv::Scalar(0,255,0), 2);
-                    cv::circle(depthGrayscale, centerDepth, 5 , cv::Scalar(0,255,0), -1);
+                    // cv::rectangle(depthGrayscale, depth_bounding_box, cv::Scalar(0,255,0), 2);
+                    // cv::circle(depthGrayscale, centerDepth, 5 , cv::Scalar(0,255,0), -1);
 
                     YakirPerson person;
                     person.box_ = detection;
@@ -523,10 +480,10 @@ void Person3DLocator::Run()
 
             }
 
-            auto msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", depthGrayscale).toImageMsg();
-            debug_depth_pub_.publish(msg);
+            // auto msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", depthGrayscale).toImageMsg();
+            // debug_depth_pub_.publish(msg);
 
-            if( true){
+            if( false){
                 
                 cerr<<" publishTargetsMarkers "<<detectedPersonsYakir_.size()<<endl;
                 publishTargetsMarkers();
@@ -549,70 +506,34 @@ void Person3DLocator::Run()
                     // tracker = cv::TrackerCSRT::create();
                     tracker = cv::TrackerGOTURN::create();
 
-                    // if (tracker->init(realsense_camera.rgbImage, rBoundingBox))
-                    // {
-                    //     ROS_DEBUG("Tracker Initialised!");
-                    // }
 
                     //yakir
-                    // if (tracker->init(bgrWorkImg, rBoundingBox))
-                    // {
-                    //     ROS_DEBUG("Tracker Initialised!");
-                    // }
+                    if (tracker->init(bgrWorkImg, rBoundingBox))
+                    {
+                        ROS_DEBUG("Tracker Initialised!");
+                    }
 
                     cerr<<" yakir 6 bIsTargetLocked"<<endl;
 
-                    //bIsTargetLocked = true; // NEED TO SET TRUE!!
+                    bIsTargetLocked = true; // NEED TO SET TRUE!!
                 }
             }
 
         } // else (bIsTargetLocked)
 
         if (bIsTargetLocked)
-        {
-            // personCameraTarget.x = targetedPersonYakir_.box_.bbox.center.x;
-            // personCameraTarget.y = targetedPersonYakir_.box_.bbox.center.y;
-            // personCameraTarget.rawDepthRayDistance = targetedPersonYakir_.distnace_;
-
-            // // tangentialDepth = targetDepth * cos(angle of bbox center from center of image)
-            // // angle of bbox center from center of image =
-            // ROS_DEBUG("Nearest person at %f, %f, %f", targetedPerson.box_.bbox.center.x,
-            //      targetedPerson.box_.bbox.center.y, targetedPerson.distnace_);
-
-            // Compute the 3D coordinate of target person
-
-            // // Vertical View
-            // dPixelDifference = abs(HALF_OF(iImageHeight) - targetedPerson.second.bbox.center.y);
-            // dPixelAngleFromCenter = DEG_TO_RAD((dPixelDifference / HALF_OF(iImageHeight)) * (double)(HALF_OF(VERTICAL_FIELD_OF_VIEW)));
-            // fVerticalViewYDepthToCenterYDepthProjection = cos(dPixelAngleFromCenter) * targetedPerson.first;
-
-            // // Horizontal View
-            // dPixelDifference = abs(HALF_OF(iImageWidth) - targetedPerson.second.bbox.center.x);
-            // dPixelAngleFromCenter = DEG_TO_RAD((dPixelDifference / HALF_OF(iImageWidth)) * (double)(HALF_OF(HORIZONTAL_FIELD_OF_VIEW)));
-
-            // personCameraTarget.depthRayDistance = fVerticalViewYDepthToCenterYDepthProjection;
-            // personCameraTarget.angleX = dPixelAngleFromCenter;
-
-            //PrepareTargetPoseFromDepthRay(targetFromCameraPoseMsg, personCameraTarget.depthRayDistance, personCameraTarget.angleX, personCameraTarget.x);
+        {           
             
             //yakir
             targetFromCameraPoseMsg.header.frame_id = "odom";
-            targetFromCameraPoseMsg.pose.position.x = targetedPersonYakir_.location_.point.x;
-            targetFromCameraPoseMsg.pose.position.y = targetedPersonYakir_.location_.point.y;
-            targetFromCameraPoseMsg.pose.position.z = targetedPersonYakir_.location_.point.z;
 
+            cv::Point2d newP;
+            updateGoalByShift(targetedPersonYakir_.location_.point.x,targetedPersonYakir_.location_.point.y,
+                0.2, newP );
+            targetFromCameraPoseMsg.pose.position.x = newP.x;
+            targetFromCameraPoseMsg.pose.position.y = newP.y;
+            targetFromCameraPoseMsg.pose.position.z = 0;          
 
-
-            // Check the target region
-            eTargetRegion = CheckTargetRegion(fVerticalViewYDepthToCenterYDepthProjection);
-
-            // To maintain a offset distance between the target person and the robot while following
-            if (eTargetRegion == FOLLOW)
-            {
-                fVerticalViewYDepthToCenterYDepthProjection -= fMinFollowRegion;
-            }
-
-            //PrepareTargetPoseFromDepthRay(poseMsg, fVerticalViewYDepthToCenterYDepthProjection, personCameraTarget.angleX, personCameraTarget.x);
 
             if (eTargetRegion != FOLLOW)
             {

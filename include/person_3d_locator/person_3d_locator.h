@@ -255,16 +255,13 @@ private:
     //yakir params
     message_filters::Subscriber<sensor_msgs::Image> image_sub;
     message_filters::Subscriber<sensor_msgs::CameraInfo> info_sub;
-    message_filters::Subscriber<sensor_msgs::CameraInfo> color_info_sub;
 
     image_transport::Publisher  debug_depth_pub_;
 
     image_geometry::PinholeCameraModel pinholeCameraModel_;
-    image_geometry::PinholeCameraModel colorPinholeCameraModel_;
     
     ros::Subscriber imgBgrSubscriber_;
     bool cameraInfoInited_ = false;
-    bool colorCameraInfoInited_  = false;
     bool bgrInited_ = false;
     cv::Mat curretDepthImg_;
     cv::Mat currentBgrImg_;
@@ -347,17 +344,14 @@ public:
     Person3DLocator(ros::NodeHandle &nodeHandler) : nodeHandler(nodeHandler){
 
          //yakir
-        image_sub.subscribe(nodeHandler, "/camera/depth/image_rect_raw", 1);
+        image_sub.subscribe(nodeHandler, "/camera/aligned_depth_to_color/image_raw", 1);
         image_sub.registerCallback(&Person3DLocator::depthCallback, this);
 
-        info_sub.subscribe(nodeHandler, "/camera/depth/camera_info", 1);
+        info_sub.subscribe(nodeHandler, "/camera/aligned_depth_to_color/camera_info", 1);
         info_sub.registerCallback(&Person3DLocator::cameraInfoCallback, this); 
 
         imgBgrSubscriber_ = nodeHandler.subscribe("/camera/color/image_raw", 1,
-                        &Person3DLocator::imageCallback, this);     
-
-        color_info_sub.subscribe(nodeHandler, "/camera/color/camera_info", 1);
-        color_info_sub.registerCallback(&Person3DLocator::colorCameraInfoCallback, this);
+                        &Person3DLocator::imageCallback, this); 
 
         targets_marker_pub_ = nodeHandler.advertise<visualization_msgs::MarkerArray>("/persons_markers", 10);
 
@@ -483,13 +477,7 @@ public:
         }
     }
 
-    void colorCameraInfoCallback(const sensor_msgs::CameraInfoConstPtr &cam_info) {
-
-        if ( colorPinholeCameraModel_.fromCameraInfo(*cam_info) )
-        {
-            colorCameraInfoInited_ = true;
-        }
-    }
+    
 
 
     bool extractDepthFromBboxObject( cv::Point2d pix, float d,
@@ -584,6 +572,25 @@ public:
 
         if( detectedPersonsYakir_.size() > 0)
             targets_marker_pub_.publish(Markerarr);
+    }
+
+
+    void updateGoalByShift(float x, float y, float shiftM, cv::Point2d& newP ){
+
+
+        float currentDisnace = sqrt(pow(x,2) + pow(y, 2));
+
+        float diff = currentDisnace - shiftM;
+
+        if( diff <=0){
+            newP = cv::Point2d(x,y);
+            return;
+        }
+
+        float scalar = diff / currentDisnace;
+
+        newP = cv::Point2d(x * scalar ,y * scalar);
+
     }
 };
 

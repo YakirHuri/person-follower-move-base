@@ -103,7 +103,7 @@ To Do List
 
 
 #define PERSON_CLASS_ID                         (1)
-#define PERSON_THRESHOLD                        (0.5)
+#define PERSON_THRESHOLD                        (0.7)
 #define TRUE                                    (1)
 #define FALSE                                   (0)
 
