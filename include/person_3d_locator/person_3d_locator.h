@@ -624,8 +624,8 @@ public:
                 robotPose.pose.position.x - currentGoal.pose.position.x);
 
             tf2::Quaternion orientation;
-            orientation.setRPY( 0, 0, angleFromTarget); 
-            cerr<<" the angle deg is "<<angles::to_degrees(angleFromTarget)<<endl;
+            orientation.setRPY( 0, 0, angleFromTarget + angles::from_degrees(180)); 
+            cerr<<" the angle deg is "<<angles::to_degrees(angleFromTarget + angles::from_degrees(180))<<endl;
 
 
             //set the new orientation
