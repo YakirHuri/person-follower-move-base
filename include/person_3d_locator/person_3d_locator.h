@@ -615,7 +615,7 @@ public:
             robotPose.pose.position.x = transform.getOrigin().x();
             robotPose.pose.position.y = transform.getOrigin().y();
             robotPose.pose.position.z = 0;
-            robotPose_.pose.orientation.x = transform.getRotation().x();
+            robotPose.pose.orientation.x = transform.getRotation().x();
             robotPose.pose.orientation.y = transform.getRotation().y();
             robotPose.pose.orientation.z = transform.getRotation().z();
             robotPose.pose.orientation.w = transform.getRotation().w();
@@ -624,7 +624,7 @@ public:
                 robotPose.pose.position.x - currentGoal.pose.position.x);
 
             tf2::Quaternion orientation;
-            orientation.setRPY( 0, 0, angle); 
+            orientation.setRPY( 0, 0, angleFromTarget); 
 
 
             //set the new orientation
@@ -638,7 +638,6 @@ public:
 
         catch (...)
         {
-            cerr << " error between " << PERSON_GOAL_DEFAULT_FRAME_ID << " to " << ROBOT_FRAME_ID << endl;
             return ;
         }
         
