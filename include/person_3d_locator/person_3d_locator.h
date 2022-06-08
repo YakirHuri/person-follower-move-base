@@ -275,6 +275,8 @@ private:
     float fy_;
 
     ros::Publisher targets_marker_pub_;
+        ros::Publisher goal_marker_pub_;
+
 
 
 
@@ -354,6 +356,9 @@ public:
                         &Person3DLocator::imageCallback, this); 
 
         targets_marker_pub_ = nodeHandler.advertise<visualization_msgs::MarkerArray>("/persons_markers", 10);
+
+        goal_marker_pub_ = nodeHandler.advertise<visualization_msgs::Marker>("/goal_marker", 10);
+
 
         image_transport::ImageTransport it(nodeHandler);
         debug_depth_pub_ = it.advertise("/debug_depth", 1);
@@ -590,6 +595,43 @@ public:
         float scalar = diff / currentDisnace;
 
         newP = cv::Point2d(x * scalar ,y * scalar);
+
+    }
+
+    void calculateGoalHeading(geometry_msgs::PoseStamped& currentGoal){
+
+        
+
+
+
+
+    }
+
+    void publishMarkerGoal(const geometry_msgs::PoseStamped& currentGoal){
+
+        visualization_msgs::Marker targetFromCameraPoseMsg;
+        targetFromCameraPoseMsg.header.frame_id = currentGoal.header.frame_id;
+        targetFromCameraPoseMsg.header.stamp = ros::Time::now();
+        targetFromCameraPoseMsg.ns = "points_and_lines";
+        targetFromCameraPoseMsg.id = 1;
+        targetFromCameraPoseMsg.action = visualization_msgs::Marker::ADD;
+        targetFromCameraPoseMsg.type = visualization_msgs::Marker::ARROW;
+        targetFromCameraPoseMsg.pose.position.x = currentGoal.pose.position.x;
+        targetFromCameraPoseMsg.pose.position.y = currentGoal.pose.position.y;
+        targetFromCameraPoseMsg.pose.position.z =  currentGoal.pose.position.z;
+        targetFromCameraPoseMsg.pose.orientation.x = currentGoal.pose.orientation.x;
+        targetFromCameraPoseMsg.pose.orientation.y = currentGoal.pose.orientation.y;
+        targetFromCameraPoseMsg.pose.orientation.z = currentGoal.pose.orientation.z;
+        targetFromCameraPoseMsg.pose.orientation.w = currentGoal.pose.orientation.w;
+        targetFromCameraPoseMsg.scale.x = 0.3;
+        targetFromCameraPoseMsg.scale.y = 0.3;
+        targetFromCameraPoseMsg.scale.z = 0.3;
+        targetFromCameraPoseMsg.color.a = 1.0;
+        targetFromCameraPoseMsg.color.r = 0.0;
+        targetFromCameraPoseMsg.color.g = 0.0;
+        targetFromCameraPoseMsg.color.b = 1.0;
+
+        goal_marker_pub_.publish(targetFromCameraPoseMsg);
 
     }
 };

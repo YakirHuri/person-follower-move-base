@@ -73,7 +73,8 @@ void Person3DLocator::Init()
 
     // CSRT tracker to track the target person
     // tracker = cv::TrackerCSRT::create();
-    tracker = cv::TrackerGOTURN::create();
+    //tracker = cv::TrackerGOTURN::create();
+    tracker = cv::TrackerKCF::create();
 
     if (!tracker)
     {
@@ -305,7 +306,8 @@ void Person3DLocator::Run()
             {   
                 tracker.release();
                 // tracker = cv::TrackerCSRT::create();
-                tracker = cv::TrackerGOTURN::create();
+                //tracker = cv::TrackerGOTURN::create();
+                tracker = cv::TrackerKCF::create();
 
                 if (tracker->init(bgrWorkImg, rDetectionTargetBBox))
                 {   
@@ -504,8 +506,11 @@ void Person3DLocator::Run()
 
                     tracker.release();
                     // tracker = cv::TrackerCSRT::create();
-                    tracker = cv::TrackerGOTURN::create();
+                    //tracker = cv::TrackerGOTURN::create();    
+                    tracker = cv::TrackerKCF::create();
 
+
+                    cerr<<"11111111111111111111 "<<endl;
 
                     //yakir
                     if (tracker->init(bgrWorkImg, rBoundingBox))
@@ -529,21 +534,18 @@ void Person3DLocator::Run()
             targetFromCameraPoseMsg.pose.position.x = targetedPersonYakir_.location_.point.x;
             targetFromCameraPoseMsg.pose.position.y = targetedPersonYakir_.location_.point.y;
             targetFromCameraPoseMsg.pose.position.z = 0;
-            targetFromCameraPoseMsg.pose.orientation.x = 0;
-            targetFromCameraPoseMsg.pose.orientation.y = 0;
-            targetFromCameraPoseMsg.pose.orientation.z = 0;
-            targetFromCameraPoseMsg.pose.orientation.w = 1;
-
+            calculateGoalHeading(targetFromCameraPoseMsg);
+           
 
 
             cerr<<" the goal is :"<<targetFromCameraPoseMsg.pose.position.x<<", "<<targetFromCameraPoseMsg.pose.position.y<<endl;
 
-            // cv::Point2d newP;
-            // updateGoalByShift(targetFromCameraPoseMsg.pose.position.x,targetFromCameraPoseMsg.pose.position.y,
-            //     0.2, newP );
-            // targetFromCameraPoseMsg.pose.position.x = newP.x;
-            // targetFromCameraPoseMsg.pose.position.y = newP.y;
-            // targetFromCameraPoseMsg.pose.position.z = 0;          
+            cv::Point2d newP;
+            updateGoalByShift(targetFromCameraPoseMsg.pose.position.x,targetFromCameraPoseMsg.pose.position.y,
+                0.5, newP );
+            targetFromCameraPoseMsg.pose.position.x = newP.x;
+            targetFromCameraPoseMsg.pose.position.y = newP.y;
+            targetFromCameraPoseMsg.pose.position.z = 0;          
 
 
             if (eTargetRegion != FOLLOW)
@@ -554,6 +556,8 @@ void Person3DLocator::Run()
 
             // Publish the goal pose of target
             PublishGoal(targetFromCameraPoseMsg);
+
+            publishMarkerGoal(targetFromCameraPoseMsg);
 
             iTrackerRetryAttempts = iZero;
         }
