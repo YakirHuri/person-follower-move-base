@@ -600,8 +600,52 @@ public:
 
     void calculateGoalHeading(geometry_msgs::PoseStamped& currentGoal){
 
-        
 
+        //get current robot pose
+        geometry_msgs::PoseStamped robotPose;
+
+
+        try
+        {   
+            tf::StampedTransform transform;
+            //get current robot pose
+            yakir_tfListener_.lookupTransform(PERSON_GOAL_DEFAULT_FRAME_ID, ROBOT_FRAME_ID,
+                                        ros::Time(0), transform);
+
+            robotPose.pose.position.x = transform.getOrigin().x();
+            robotPose.pose.position.y = transform.getOrigin().y();
+            robotPose.pose.position.z = 0;
+            robotPose_.pose.orientation.x = transform.getRotation().x();
+            robotPose.pose.orientation.y = transform.getRotation().y();
+            robotPose.pose.orientation.z = transform.getRotation().z();
+            robotPose.pose.orientation.w = transform.getRotation().w();
+
+            float angleFromTarget =  atan2(robotPose.pose.position.y - currentGoal.pose.position.y,
+                robotPose.pose.position.x - currentGoal.pose.position.x);
+
+            tf2::Quaternion orientation;
+            orientation.setRPY( 0, 0, angle); 
+
+
+            //set the new orientation
+            currentGoal.pose.orientation.w =  orientation.getW(); 
+            currentGoal.pose.orientation.x =  orientation.getX(); 
+            currentGoal.pose.orientation.y =  orientation.getY(); 
+            currentGoal.pose.orientation.z =  orientation.getZ(); 
+
+
+
+
+            return true;
+        }
+
+        catch (...)
+        {
+            cerr << " error between " << mapFrame_ << " to " << baseLinkFrame_ << endl;
+            return false;
+        }
+        
+        
 
 
 
