@@ -640,6 +640,10 @@ public:
         catch (...)
         {   
             cerr<<" error getting robot pose "<<endl;
+            currentGoal.pose.orientation.w =  1; 
+            currentGoal.pose.orientation.x =  0; 
+            currentGoal.pose.orientation.y =  0; 
+            currentGoal.pose.orientation.z =  0; 
             return ;
         }
         
