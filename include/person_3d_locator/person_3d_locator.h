@@ -64,6 +64,7 @@ To Do List
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <angles/angles.h>
 
 
 #include <string>
@@ -604,12 +605,11 @@ public:
         //get current robot pose
         geometry_msgs::PoseStamped robotPose;
 
-
         try
         {   
             tf::StampedTransform transform;
             //get current robot pose
-            yakir_tfListener_.lookupTransform("odom", "base_footprint",
+            yakir_tfListener_.lookupTransform("odom", "base_link",
                                         ros::Time(0), transform);
 
             robotPose.pose.position.x = transform.getOrigin().x();
@@ -625,6 +625,7 @@ public:
 
             tf2::Quaternion orientation;
             orientation.setRPY( 0, 0, angleFromTarget); 
+            cerr<<" the angle deg is "<<angles::to_degrees(angleFromTarget)<<endl;
 
 
             //set the new orientation
@@ -637,7 +638,8 @@ public:
         }
 
         catch (...)
-        {
+        {   
+            cerr<<" error getting robot pose "<<endl;
             return ;
         }
         
