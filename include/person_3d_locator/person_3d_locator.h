@@ -609,7 +609,7 @@ public:
         {   
             tf::StampedTransform transform;
             //get current robot pose
-            yakir_tfListener_.lookupTransform(PERSON_GOAL_DEFAULT_FRAME_ID, ROBOT_FRAME_ID,
+            yakir_tfListener_.lookupTransform("odom", "base_footprint",
                                         ros::Time(0), transform);
 
             robotPose.pose.position.x = transform.getOrigin().x();
