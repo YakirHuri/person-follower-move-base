@@ -633,16 +633,13 @@ public:
             currentGoal.pose.orientation.y =  orientation.getY(); 
             currentGoal.pose.orientation.z =  orientation.getZ(); 
 
-
-
-
-            return true;
+            return ;
         }
 
         catch (...)
         {
-            cerr << " error between " << mapFrame_ << " to " << baseLinkFrame_ << endl;
-            return false;
+            cerr << " error between " << PERSON_GOAL_DEFAULT_FRAME_ID << " to " << ROBOT_FRAME_ID << endl;
+            return ;
         }
         
         
