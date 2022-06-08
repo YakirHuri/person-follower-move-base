@@ -599,6 +599,15 @@ public:
 
     }
 
+    float getRobotHeading(const geometry_msgs::Pose &pose) const
+    {
+
+        return atan2((2.0 *
+                        (pose.orientation.w * pose.orientation.z + pose.orientation.x * pose.orientation.y)),
+                        (1.0 - 2.0 * (pose.orientation.y * pose.orientation.y + pose.orientation.z * pose.orientation.z)));
+    }
+
+
     void calculateGoalHeading(geometry_msgs::PoseStamped& currentGoal){
 
 
@@ -609,7 +618,7 @@ public:
         {   
             tf::StampedTransform transform;
             //get current robot pose
-            yakir_tfListener_.lookupTransform("odom", "base_link",
+            yakir_tfListener_.lookupTransform("base_link, odom", 
                                         ros::Time(0), transform);
 
             robotPose.pose.position.x = transform.getOrigin().x();
@@ -620,12 +629,17 @@ public:
             robotPose.pose.orientation.z = transform.getRotation().z();
             robotPose.pose.orientation.w = transform.getRotation().w();
 
-            float angleFromTarget =  atan2(robotPose.pose.position.y - currentGoal.pose.position.y,
-                robotPose.pose.position.x - currentGoal.pose.position.x);
+            float angleFromTarget =  atan2(currentGoal.pose.position.y,
+                currentGoal.pose.position.x);
 
             tf2::Quaternion orientation;
-            orientation.setRPY( 0, 0, angleFromTarget + angles::from_degrees(180)); 
-            cerr<<" the angle deg is "<<angles::to_degrees(angleFromTarget + angles::from_degrees(180))<<endl;
+            orientation.setRPY( 0, 0, angleFromTarget);
+            cerr<<" the angle deg is "<<angles::to_degrees(angleFromTarget)<<endl;
+
+            
+            // orientation.setRPY( 0, 0, angleFromTarget + angles::from_degrees(180)); 
+            // cerr<<" the angle deg is "<<angles::to_degrees(angleFromTarget + angles::from_degrees(180))<<endl;
+
 
 
             //set the new orientation
