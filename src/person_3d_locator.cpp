@@ -73,8 +73,8 @@ void Person3DLocator::Init()
 
     // CSRT tracker to track the target person
     // tracker = cv::TrackerCSRT::create();
-    //tracker = cv::TrackerGOTURN::create();
-    tracker = cv::TrackerKCF::create();
+    tracker = cv::TrackerGOTURN::create();
+    // tracker = cv::TrackerKCF::create();
 
     if (!tracker)
     {
@@ -306,8 +306,8 @@ void Person3DLocator::Run()
             {   
                 tracker.release();
                 // tracker = cv::TrackerCSRT::create();
-                //tracker = cv::TrackerGOTURN::create();
-                tracker = cv::TrackerKCF::create();
+                tracker = cv::TrackerGOTURN::create();
+                // tracker = cv::TrackerKCF::create();
 
                 if (tracker->init(bgrWorkImg, rDetectionTargetBBox))
                 {   
@@ -506,8 +506,8 @@ void Person3DLocator::Run()
 
                     tracker.release();
                     // tracker = cv::TrackerCSRT::create();
-                    //tracker = cv::TrackerGOTURN::create();    
-                    tracker = cv::TrackerKCF::create();
+                    tracker = cv::TrackerGOTURN::create();    
+                    // tracker = cv::TrackerKCF::create();
 
 
                     cerr<<"11111111111111111111 "<<endl;
