@@ -276,7 +276,7 @@ private:
     float fy_;
 
     ros::Publisher targets_marker_pub_;
-        ros::Publisher goal_marker_pub_;
+    ros::Publisher goal_marker_pub_;
 
 
 
@@ -358,7 +358,7 @@ public:
 
         targets_marker_pub_ = nodeHandler.advertise<visualization_msgs::MarkerArray>("/persons_markers", 10);
 
-        goal_marker_pub_ = nodeHandler.advertise<visualization_msgs::Marker>("/goal_marker", 10);
+        goal_marker_pub_ = nodeHandler.advertise<visualization_msgs::MarkerArray>("/goal_marker", 10);
 
 
         image_transport::ImageTransport it(nodeHandler);
@@ -669,29 +669,32 @@ public:
 
     void publishMarkerGoal(const geometry_msgs::PoseStamped& currentGoal){
 
-        visualization_msgs::Marker targetFromCameraPoseMsg;
-        targetFromCameraPoseMsg.header.frame_id = currentGoal.header.frame_id;
-        targetFromCameraPoseMsg.header.stamp = ros::Time::now();
-        targetFromCameraPoseMsg.ns = "points_and_lines";
-        targetFromCameraPoseMsg.id = 1;
-        targetFromCameraPoseMsg.action = visualization_msgs::Marker::ADD;
-        targetFromCameraPoseMsg.type = visualization_msgs::Marker::ARROW;
-        targetFromCameraPoseMsg.pose.position.x = currentGoal.pose.position.x;
-        targetFromCameraPoseMsg.pose.position.y = currentGoal.pose.position.y;
-        targetFromCameraPoseMsg.pose.position.z =  currentGoal.pose.position.z;
-        targetFromCameraPoseMsg.pose.orientation.x = currentGoal.pose.orientation.x;
-        targetFromCameraPoseMsg.pose.orientation.y = currentGoal.pose.orientation.y;
-        targetFromCameraPoseMsg.pose.orientation.z = currentGoal.pose.orientation.z;
-        targetFromCameraPoseMsg.pose.orientation.w = currentGoal.pose.orientation.w;
-        targetFromCameraPoseMsg.scale.x = 0.3;
-        targetFromCameraPoseMsg.scale.y = 0.3;
-        targetFromCameraPoseMsg.scale.z = 0.3;
-        targetFromCameraPoseMsg.color.a = 1.0;
-        targetFromCameraPoseMsg.color.r = 0.0;
-        targetFromCameraPoseMsg.color.g = 0.0;
-        targetFromCameraPoseMsg.color.b = 1.0;
+        visualization_msgs::MarkerArray Markerarr;
+        Markerarr.markers.resize(0);
 
-        goal_marker_pub_.publish(targetFromCameraPoseMsg);
+        visualization_msgs::Marker targetFromCameraPoseMsg;
+        Markerarr.markers[0].header.frame_id = currentGoal.header.frame_id;
+        Markerarr.markers[0].header.stamp = ros::Time::now();
+        Markerarr.markers[0].ns = "points_and_lines";
+        Markerarr.markers[0].id = 1;
+        Markerarr.markers[0].action = visualization_msgs::Marker::ADD;
+        Markerarr.markers[0].type = visualization_msgs::Marker::ARROW;
+        Markerarr.markers[0].pose.position.x = currentGoal.pose.position.x;
+        Markerarr.markers[0].pose.position.y = currentGoal.pose.position.y;
+        Markerarr.markers[0].pose.position.z =  currentGoal.pose.position.z;
+        Markerarr.markers[0].pose.orientation.x = currentGoal.pose.orientation.x;
+        Markerarr.markers[0].pose.orientation.y = currentGoal.pose.orientation.y;
+        Markerarr.markers[0].pose.orientation.z = currentGoal.pose.orientation.z;
+        Markerarr.markers[0].pose.orientation.w = currentGoal.pose.orientation.w;
+        Markerarr.markers[0].scale.x = 0.3;
+        Markerarr.markers[0].scale.y = 0.3;
+        Markerarr.markers[0].scale.z = 0.3;
+        Markerarr.markers[0].color.a = 1.0;
+        Markerarr.markers[0].color.r = 0.0;
+        Markerarr.markers[0].color.g = 0.0;
+        Markerarr.markers[0].color.b = 1.0;
+
+        goal_marker_pub_.publish(Markerarr);
 
     }
 };
