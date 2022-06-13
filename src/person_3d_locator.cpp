@@ -369,7 +369,8 @@ void Person3DLocator::Run()
 
             else
             {
-
+                bIsTargetLocked = false;
+                continue;
                 ROS_INFO("Target Lost!");
                 ROS_INFO("Time: %f - %f", (ros::Time::now() - prevRotationEndTime).toSec(), fSearchDwellDuration);
                 if (iTrackerRetryAttempts < TRACKER_RETRY_ATTEMPTS)
