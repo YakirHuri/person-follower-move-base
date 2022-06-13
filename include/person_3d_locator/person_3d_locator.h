@@ -670,7 +670,7 @@ public:
     void publishMarkerGoal(const geometry_msgs::PoseStamped& currentGoal){
 
         visualization_msgs::MarkerArray Markerarr;
-        Markerarr.markers.resize(0);
+        Markerarr.markers.resize(1);
 
         visualization_msgs::Marker targetFromCameraPoseMsg;
         Markerarr.markers[0].header.frame_id = currentGoal.header.frame_id;
