@@ -72,8 +72,8 @@ void Person3DLocator::Init()
     prevRotationEndTime = ros::Time::now();
 
     // CSRT tracker to track the target person
-    // tracker = cv::TrackerCSRT::create();
-    tracker = cv::TrackerGOTURN::create();
+    tracker = cv::TrackerCSRT::create();
+    // tracker = cv::TrackerGOTURN::create();
     // tracker = cv::TrackerKCF::create();
 
     if (!tracker)
@@ -305,8 +305,8 @@ void Person3DLocator::Run()
             else if ((fTargetIOU > fCriticalIOUThreshold) && (fTargetIOU < fWarningIOUThreshold))
             {   
                 tracker.release();
-                // tracker = cv::TrackerCSRT::create();
-                tracker = cv::TrackerGOTURN::create();
+                tracker = cv::TrackerCSRT::create();
+                // tracker = cv::TrackerGOTURN::create();
                 // tracker = cv::TrackerKCF::create();
 
                 if (tracker->init(bgrWorkImg, rDetectionTargetBBox))
@@ -361,9 +361,7 @@ void Person3DLocator::Run()
                 targetedPersonYakir_.box_.bbox.center.x = rBoundingBox.x + (rBoundingBox.width / 2);
                 targetedPersonYakir_.box_.bbox.center.y = rBoundingBox.y + (rBoundingBox.height / 2);
                 targetedPersonYakir_.box_.bbox.size_x = rBoundingBox.width;
-                targetedPersonYakir_.box_.bbox.size_y = rBoundingBox.height;
-
-                //yakir
+                targetedPersonYakir_.box_.bbox.size_y = rBoundingBox.height;                //yakir
                 targetedPersonYakir_.distnace_ = yakirGetDistance(targetedPersonYakir_.box_.bbox.center.x,
                      targetedPersonYakir_.box_.bbox.center.y, depthImg);
 
@@ -381,38 +379,38 @@ void Person3DLocator::Run()
                     continue;
                 }
 
-                else if ((bIsTargetLocked == true) && (bIsRotationInitiated == false))
-                {
-                    bIsRotationInitiated = true;
-                    // actionClient->cancelAllGoals();
-                    getCameraPose();
-                    ROS_INFO("Initiating rotation");
+                // else if ((bIsTargetLocked == true) && (bIsRotationInitiated == false))
+                // {
+                //     bIsRotationInitiated = true;
+                //     // actionClient->cancelAllGoals();
+                //     getCameraPose();
+                //     ROS_INFO("Initiating rotation");
 
-                    // Reset rotation variables
-                    fRotation = ROTATION_DEFAULT;
-                    prevRotationEndTime = ros::Time::now();
-                    PublishRotationGoal();
-                }
+                //     // Reset rotation variables
+                //     fRotation = ROTATION_DEFAULT;
+                //     prevRotationEndTime = ros::Time::now();
+                //     PublishRotationGoal();
+                // }
 
-                else if ((ros::Time::now() - prevRotationEndTime).toSec() > fSearchDwellDuration)
-                {
-                    // Initiate target search
-                    // Note : Target locked status can get modified in move base done goal callback, hence it's necessary to check for the target locked status
-                    // before initiating the rotation, otherwise, it might end up in infinite rotation behaviour
+                // else if ((ros::Time::now() - prevRotationEndTime).toSec() > fSearchDwellDuration)
+                // {
+                //     // Initiate target search
+                //     // Note : Target locked status can get modified in move base done goal callback, hence it's necessary to check for the target locked status
+                //     // before initiating the rotation, otherwise, it might end up in infinite rotation behaviour
 
-                    bIsTargetLocked = false;
+                //     bIsTargetLocked = false;
 
-                    ROS_INFO("Delay in executing recovery behaviour, hence cancelling it and returning to original pose");
+                //     ROS_INFO("Delay in executing recovery behaviour, hence cancelling it and returning to original pose");
 
-                    while (qRotationGoalQueue.size() > iZero)
-                    {
-                        qRotationGoalQueue.pop();
-                    }
+                //     while (qRotationGoalQueue.size() > iZero)
+                //     {
+                //         qRotationGoalQueue.pop();
+                //     }
 
-                    actionClient->cancelAllGoals();
-                    prevRotationEndTime = ros::Time::now();
-                    PublishGoal(recoveryStartPoseMsg, true);
-                }
+                //     actionClient->cancelAllGoals();
+                //     prevRotationEndTime = ros::Time::now();
+                //     PublishGoal(recoveryStartPoseMsg, true);
+                // }
 
                 continue;
 
@@ -505,8 +503,8 @@ void Person3DLocator::Run()
 
 
                     tracker.release();
-                    // tracker = cv::TrackerCSRT::create();
-                    tracker = cv::TrackerGOTURN::create();    
+                    tracker = cv::TrackerCSRT::create();
+                    // tracker = cv::TrackerGOTURN::create();    
                     // tracker = cv::TrackerKCF::create();
 
 
