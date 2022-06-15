@@ -654,8 +654,8 @@ void Person3DLocator::PublishRotationGoal()
     float fTargetDepthRayDistance{targetedPersonYakir_.distnace_ - fRecoveryTargetOffset};
     geometry_msgs::PoseStamped poseMsg;
 
-    float angleFromTarget =  atan2(targetedPersonYakir_.location_.y,
-        targetedPersonYakir_.location_.x);
+    float angleFromTarget =  atan2(targetedPersonYakir_.location_.pose.position.y,
+        targetedPersonYakir_.location_.pose.position.x);
 
     // PrepareTargetPoseFromDepthRay(poseMsg, fTargetDepthRayDistance, personCameraTarget.angleX, personCameraTarget.x);
     PrepareTargetPoseFromDepthRay(poseMsg, fTargetDepthRayDistance, angleFromTarget,targetedPersonYakir_.box_.bbox.center.x);
