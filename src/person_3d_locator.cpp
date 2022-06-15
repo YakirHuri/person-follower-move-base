@@ -369,8 +369,7 @@ void Person3DLocator::Run()
 
             else
             {
-                bIsTargetLocked = false;
-                continue;
+                
                 ROS_INFO("Target Lost!");
                 ROS_INFO("Time: %f - %f", (ros::Time::now() - prevRotationEndTime).toSec(), fSearchDwellDuration);
                 if (iTrackerRetryAttempts < TRACKER_RETRY_ATTEMPTS)
@@ -380,38 +379,38 @@ void Person3DLocator::Run()
                     continue;
                 }
 
-                // else if ((bIsTargetLocked == true) && (bIsRotationInitiated == false))
-                // {
-                //     bIsRotationInitiated = true;
-                //     // actionClient->cancelAllGoals();
-                //     getCameraPose();
-                //     ROS_INFO("Initiating rotation");
+                else if ((bIsTargetLocked == true) && (bIsRotationInitiated == false))
+                {
+                    bIsRotationInitiated = true;
+                    // actionClient->cancelAllGoals();
+                    getCameraPose();
+                    ROS_INFO("Initiating rotation");
 
-                //     // Reset rotation variables
-                //     fRotation = ROTATION_DEFAULT;
-                //     prevRotationEndTime = ros::Time::now();
-                //     PublishRotationGoal();
-                // }
+                    // Reset rotation variables
+                    fRotation = ROTATION_DEFAULT;
+                    prevRotationEndTime = ros::Time::now();
+                    PublishRotationGoal();
+                }
 
-                // else if ((ros::Time::now() - prevRotationEndTime).toSec() > fSearchDwellDuration)
-                // {
-                //     // Initiate target search
-                //     // Note : Target locked status can get modified in move base done goal callback, hence it's necessary to check for the target locked status
-                //     // before initiating the rotation, otherwise, it might end up in infinite rotation behaviour
+                else if ((ros::Time::now() - prevRotationEndTime).toSec() > fSearchDwellDuration)
+                {
+                    // Initiate target search
+                    // Note : Target locked status can get modified in move base done goal callback, hence it's necessary to check for the target locked status
+                    // before initiating the rotation, otherwise, it might end up in infinite rotation behaviour
 
-                //     bIsTargetLocked = false;
+                    bIsTargetLocked = false;
 
-                //     ROS_INFO("Delay in executing recovery behaviour, hence cancelling it and returning to original pose");
+                    ROS_INFO("Delay in executing recovery behaviour, hence cancelling it and returning to original pose");
 
-                //     while (qRotationGoalQueue.size() > iZero)
-                //     {
-                //         qRotationGoalQueue.pop();
-                //     }
+                    while (qRotationGoalQueue.size() > iZero)
+                    {
+                        qRotationGoalQueue.pop();
+                    }
 
-                //     actionClient->cancelAllGoals();
-                //     prevRotationEndTime = ros::Time::now();
-                //     PublishGoal(recoveryStartPoseMsg, true);
-                // }
+                    actionClient->cancelAllGoals();
+                    prevRotationEndTime = ros::Time::now();
+                    PublishGoal(recoveryStartPoseMsg, true);
+                }
 
                 continue;
 
@@ -541,7 +540,7 @@ void Person3DLocator::Run()
 
             cv::Point2d newP;
             updateGoalByShift(targetFromCameraPoseMsg.pose.position.x,targetFromCameraPoseMsg.pose.position.y,
-                0.5, newP );
+                1.0, newP );
             targetFromCameraPoseMsg.pose.position.x = newP.x;
             targetFromCameraPoseMsg.pose.position.y = newP.y;
             targetFromCameraPoseMsg.pose.position.z = 0;          
@@ -647,13 +646,20 @@ Notes   :   n/a
 ============================================================================*/
 
 void Person3DLocator::PublishRotationGoal()
-{
+{   
+    //targetedPersonYakir_ 
     tf2::Quaternion qQuaternionCam, qQuaternionTargetFromCam, qQuaternionTarget;
     int iRotationSteps;
-    float fTargetDepthRayDistance{personCameraTarget.depthRayDistance - fRecoveryTargetOffset};
+    // float fTargetDepthRayDistance{personCameraTarget.depthRayDistance - fRecoveryTargetOffset};
+    float fTargetDepthRayDistance{targetedPersonYakir_.distnace_ - fRecoveryTargetOffset};
     geometry_msgs::PoseStamped poseMsg;
 
-    PrepareTargetPoseFromDepthRay(poseMsg, fTargetDepthRayDistance, personCameraTarget.angleX, personCameraTarget.x);
+    float angleFromTarget =  atan2(currentGoal.pose.position.y,
+        currentGoal.pose.position.x);
+
+    // PrepareTargetPoseFromDepthRay(poseMsg, fTargetDepthRayDistance, personCameraTarget.angleX, personCameraTarget.x);
+    PrepareTargetPoseFromDepthRay(poseMsg, fTargetDepthRayDistance, angleFromTarget,targetedPersonYakir_.box_.bbox.center.x);
+
 
     transformPoseToOdom(poseMsg);
     recoveryStartPoseMsg = poseMsg;
